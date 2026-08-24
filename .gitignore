@@ -1,0 +1,17 @@
+node_modules/
+dist/
+release*/
+.codex/
+
+.env
+.env.*
+!.env.example
+
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.log
+
+.DS_Store
+Thumbs.db

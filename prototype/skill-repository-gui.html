@@ -1,0 +1,1370 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>个人 Skill 仓库</title>
+  <style>
+    :root {
+      --bg: #f4f5f3;
+      --panel: #fbfcfa;
+      --panel-strong: #ffffff;
+      --ink: #222521;
+      --muted: #697066;
+      --line: #d9ded5;
+      --line-strong: #c3cbbf;
+      --green: #17745b;
+      --green-2: #e4f3ed;
+      --blue: #285d8f;
+      --amber: #9c6a16;
+      --danger: #b13d35;
+      --danger-bg: #fae8e5;
+      --shadow: 0 18px 48px rgba(42, 47, 39, 0.10);
+      --radius: 8px;
+      --mono: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+      --body: "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(34, 37, 33, 0.035) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(34, 37, 33, 0.026) 1px, transparent 1px),
+        var(--bg);
+      background-size: 28px 28px;
+      font-family: var(--body);
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 220px minmax(320px, 390px) minmax(420px, 1fr);
+      height: 100vh;
+      min-height: 720px;
+      border: 1px solid var(--line);
+      background: rgba(251, 252, 250, 0.72);
+      backdrop-filter: blur(14px);
+    }
+
+    .sidebar,
+    .list-pane,
+    .detail-pane {
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      padding: 18px 14px;
+      border-right: 1px solid var(--line);
+      background: rgba(244, 246, 242, 0.86);
+    }
+
+    .brand {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 4px 4px 18px;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      color: var(--green);
+      background: #eef6f0;
+      font-weight: 800;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 760;
+    }
+
+    .brand-subtitle {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .nav-section {
+      padding: 12px 0;
+      border-top: 1px solid rgba(217, 222, 213, 0.8);
+    }
+
+    .section-title {
+      margin: 0 8px 8px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .nav-item,
+    .tag-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      min-height: 36px;
+      padding: 0 9px;
+      border-radius: 8px;
+      color: var(--ink);
+      background: transparent;
+      text-align: left;
+    }
+
+    .nav-item:hover,
+    .tag-item:hover,
+    .nav-item.active,
+    .tag-item.active {
+      background: var(--panel-strong);
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+
+    .nav-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .nav-label span:last-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .count {
+      color: var(--muted);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+    }
+
+    .tool-button {
+      display: grid;
+      place-items: center;
+      height: 36px;
+      border-radius: 8px;
+      color: var(--muted);
+      background: var(--panel);
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+
+    .tool-button:hover {
+      color: var(--green);
+      box-shadow: inset 0 0 0 1px var(--green);
+    }
+
+    .list-pane {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--line);
+      background: rgba(251, 252, 250, 0.82);
+    }
+
+    .list-header {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .search-row {
+      display: grid;
+      grid-template-columns: 1fr 92px 38px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .search {
+      width: 100%;
+      height: 38px;
+      padding: 0 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      outline: none;
+      color: var(--ink);
+      background: var(--panel-strong);
+    }
+
+    .search:focus,
+    select:focus,
+    input:focus,
+    textarea:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(23, 116, 91, 0.12);
+    }
+
+    .icon-button {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      color: white;
+      background: var(--green);
+      box-shadow: 0 8px 20px rgba(23, 116, 91, 0.22);
+    }
+
+    .ai-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 38px;
+      border-radius: 8px;
+      color: white;
+      background: #285d8f;
+      font-size: 13px;
+      font-weight: 800;
+      box-shadow: 0 8px 20px rgba(40, 93, 143, 0.20);
+      white-space: nowrap;
+    }
+
+    .filter-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    select {
+      width: 100%;
+      height: 34px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      background: var(--panel-strong);
+    }
+
+    .result-count {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .skill-list {
+      flex: 1;
+      overflow: auto;
+      padding: 10px;
+    }
+
+    .skill-card {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      text-align: left;
+    }
+
+    .skill-card + .skill-card {
+      margin-top: 8px;
+    }
+
+    .skill-card:hover {
+      background: rgba(255, 255, 255, 0.76);
+      border-color: var(--line);
+    }
+
+    .skill-card.active {
+      background: var(--panel-strong);
+      border-color: rgba(23, 116, 91, 0.36);
+      box-shadow: var(--shadow);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .skill-name {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 760;
+    }
+
+    .source-dot {
+      flex: 0 0 auto;
+      width: 8px;
+      height: 8px;
+      margin-top: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(23, 116, 91, 0.12);
+    }
+
+    .skill-desc {
+      margin: 7px 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .tag-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 0 7px;
+      border-radius: 999px;
+      color: #315044;
+      background: var(--green-2);
+      font-size: 11px;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .meta-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .detail-pane {
+      display: flex;
+      flex-direction: column;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .detail-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 70px;
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .crumb {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .secondary-button,
+    .primary-button,
+    .danger-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 36px;
+      padding: 0 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .secondary-button {
+      color: var(--ink);
+      background: var(--panel-strong);
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+
+    .primary-button {
+      color: white;
+      background: var(--green);
+    }
+
+    .danger-button {
+      color: var(--danger);
+      background: var(--danger-bg);
+    }
+
+    .detail-scroll {
+      flex: 1;
+      overflow: auto;
+      padding: 24px;
+    }
+
+    .detail-title-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 18px;
+    }
+
+    .detail-title {
+      margin: 0;
+      font-size: 29px;
+      line-height: 1.16;
+      font-weight: 820;
+    }
+
+    .detail-desc {
+      max-width: 760px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      color: var(--blue);
+      background: #e7f0f7;
+      font-size: 12px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .detail-stack {
+      max-width: 900px;
+      margin-top: 18px;
+    }
+
+    .section {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .section + .section {
+      margin-top: 16px;
+    }
+
+    .section-title-large {
+      margin: 0 0 12px;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .text-block {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .steps {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    .code-block {
+      position: relative;
+      margin: 10px 0 0;
+      padding: 13px 46px 13px 13px;
+      border: 1px solid #263029;
+      border-radius: 8px;
+      color: #e8f3ed;
+      background: #1f2923;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.6;
+      overflow: auto;
+    }
+
+    .copy-code {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+      color: #1f2923;
+      background: #c8ebdc;
+    }
+
+    .fact-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .fact {
+      display: grid;
+      grid-template-columns: 88px 1fr;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .fact strong {
+      color: var(--ink);
+      font-weight: 750;
+    }
+
+    .link-like {
+      color: var(--blue);
+      text-decoration: none;
+      word-break: break-all;
+    }
+
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      transform: translateY(24px);
+      opacity: 0;
+      pointer-events: none;
+      padding: 10px 13px;
+      border-radius: 8px;
+      color: white;
+      background: #1f2923;
+      box-shadow: var(--shadow);
+      transition: opacity 180ms ease, transform 180ms ease;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .ai-import,
+    .editor {
+      display: none;
+    }
+
+    .ai-import.active,
+    .editor.active,
+    .viewer.active {
+      display: block;
+    }
+
+    .viewer.hidden {
+      display: none;
+    }
+
+    .detail-pane.ai-mode .skill-actions {
+      display: none;
+    }
+
+    .ai-hero {
+      max-width: 900px;
+      padding: 20px;
+      border: 1px solid rgba(40, 93, 143, 0.22);
+      border-radius: 8px;
+      background: linear-gradient(135deg, #ffffff 0%, #eef6f4 100%);
+      box-shadow: var(--shadow);
+    }
+
+    .ai-title {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.18;
+      font-weight: 820;
+    }
+
+    .ai-subtitle {
+      max-width: 720px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .ai-form {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .ai-url-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .toggle-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toggle-line input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--green);
+    }
+
+    .source-preview {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 1px dashed var(--line-strong);
+      border-radius: 8px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.66);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .draft-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .draft-item {
+      min-height: 74px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-strong);
+    }
+
+    .draft-item strong {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 12px;
+    }
+
+    .draft-item span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field.wide {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      outline: none;
+      color: var(--ink);
+      background: var(--panel-strong);
+    }
+
+    input {
+      height: 38px;
+      padding: 0 11px;
+    }
+
+    textarea {
+      min-height: 92px;
+      padding: 10px 11px;
+      resize: vertical;
+      line-height: 1.55;
+    }
+
+    .editor-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .empty {
+      display: none;
+      place-items: center;
+      height: 100%;
+      padding: 34px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .empty.active {
+      display: grid;
+    }
+
+    .empty strong {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--ink);
+      font-size: 16px;
+    }
+
+    @media (max-width: 980px) {
+      .app-shell {
+        grid-template-columns: 72px minmax(300px, 360px) minmax(360px, 1fr);
+      }
+
+      .brand {
+        grid-template-columns: 1fr;
+      }
+
+      .brand-title,
+      .brand-subtitle,
+      .section-title,
+      .nav-label span:last-child,
+      .count {
+        display: none;
+      }
+
+      .sidebar {
+        padding: 14px 10px;
+      }
+
+      .nav-item,
+      .tag-item {
+        justify-content: center;
+      }
+
+      .nav-label {
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .app-shell {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        height: auto;
+      }
+
+      .sidebar {
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        overflow: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .nav-section,
+      .sidebar-footer {
+        display: flex;
+        gap: 6px;
+        padding: 0;
+        border: 0;
+      }
+
+      .list-pane {
+        min-height: 360px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .detail-stack,
+      .form-grid,
+      .ai-url-row,
+      .draft-grid,
+      .detail-title-row {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-scroll {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <aside class="sidebar" aria-label="左侧导航">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">S</div>
+        <div>
+          <h1 class="brand-title">个人 Skill 仓库</h1>
+          <p class="brand-subtitle">本地知识库</p>
+        </div>
+      </div>
+
+      <section class="nav-section">
+        <p class="section-title">视图</p>
+        <button class="nav-item active" data-filter="all">
+          <span class="nav-label"><span>▦</span><span>全部 Skills</span></span>
+          <span class="count" id="allCount">0</span>
+        </button>
+        <button class="nav-item" data-filter="recent">
+          <span class="nav-label"><span>◷</span><span>最近更新</span></span>
+          <span class="count">3</span>
+        </button>
+        <button class="nav-item" data-filter="uncategorized">
+          <span class="nav-label"><span>◇</span><span>未分类</span></span>
+          <span class="count">0</span>
+        </button>
+      </section>
+
+      <section class="nav-section" id="tagNav">
+        <p class="section-title">标签</p>
+      </section>
+
+      <div class="sidebar-footer">
+        <button class="tool-button" title="导入 JSON" aria-label="导入 JSON">⇩</button>
+        <button class="tool-button" title="导出 JSON" aria-label="导出 JSON">⇧</button>
+        <button class="tool-button" title="设置" aria-label="设置">⚙</button>
+      </div>
+    </aside>
+
+    <section class="list-pane" aria-label="Skill 列表">
+      <div class="list-header">
+        <div class="search-row">
+          <input class="search" id="searchInput" placeholder="搜索名称、标签、场景..." />
+          <button class="ai-button" id="aiImportButton">AI 导入</button>
+          <button class="icon-button" id="newButton" title="手动新建 Skill" aria-label="手动新建 Skill">＋</button>
+        </div>
+        <div class="filter-row">
+          <select id="sortSelect" aria-label="排序">
+            <option value="updated">最近更新</option>
+            <option value="name">名称 A-Z</option>
+            <option value="created">创建时间</option>
+          </select>
+          <span class="result-count" id="resultCount">0 项</span>
+        </div>
+      </div>
+      <div class="skill-list" id="skillList"></div>
+      <div class="empty" id="emptyList">
+        <div>
+          <strong>没有找到匹配的 Skill</strong>
+          <span>清空搜索或切换标签后再试。</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="detail-pane ai-mode" id="detailPane" aria-label="Skill 详情">
+      <div class="detail-toolbar">
+        <div>
+          <div class="crumb">Skill / <span id="crumbName">详情</span></div>
+        </div>
+        <div class="toolbar-actions skill-actions">
+          <button class="secondary-button" id="copyAllButton">复制说明</button>
+          <button class="secondary-button" id="editButton">编辑</button>
+          <button class="danger-button" id="deleteButton">删除</button>
+        </div>
+      </div>
+
+      <div class="detail-scroll">
+        <section class="ai-import active" id="aiImportPanel">
+          <div class="ai-hero">
+            <span class="status-badge">默认使用 AI 导入</span>
+            <h2 class="ai-title">粘贴 Skill 下载网址，AI 自动整理条目</h2>
+            <p class="ai-subtitle">用户只需要提供下载网址或资料网址。AI 会在授权联网后自行查找网页资料，提取简介、标签、适用场景和安装方法，生成可编辑草稿。</p>
+
+            <div class="ai-form">
+              <div class="field">
+                <label for="aiUrl">Skill 下载网址或资料网址</label>
+                <div class="ai-url-row">
+                  <input id="aiUrl" value="https://github.com/example/awesome-skill" />
+                  <button type="button" class="primary-button" id="aiGenerateButton">生成草稿</button>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="aiPrompt">补充要求</label>
+                <textarea id="aiPrompt">请整理成适合个人 Skill 仓库保存的条目，安装方法要简洁可复制。</textarea>
+              </div>
+
+              <label class="toggle-line">
+                <input type="checkbox" id="allowWebAccess" checked />
+                允许 AI 使用联网 Skill 自行查找资料
+              </label>
+
+              <div class="source-preview">
+                <strong>资料来源预览</strong>
+                <span id="aiSourcePreview">将访问用户提供的网址，并补充搜索 README、安装说明、使用场景和依赖信息。</span>
+              </div>
+
+              <div class="draft-grid" id="aiDraftGrid">
+                <div class="draft-item"><strong>名称</strong><span>awesome-skill</span></div>
+                <div class="draft-item"><strong>标签</strong><span>待生成</span></div>
+                <div class="draft-item"><strong>安装方法</strong><span>待生成可复制命令</span></div>
+              </div>
+
+              <div class="editor-actions">
+                <button type="button" class="secondary-button" id="manualCreateButton">手动新建</button>
+                <button type="button" class="primary-button" id="saveDraftButton">保存草稿</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="viewer hidden" id="viewer">
+          <div class="detail-title-row">
+            <div>
+              <h2 class="detail-title" id="detailName"></h2>
+              <p class="detail-desc" id="detailDesc"></p>
+            </div>
+            <span class="status-badge">可复制安装</span>
+          </div>
+
+          <div class="tag-line" id="detailTags"></div>
+
+          <div class="detail-stack">
+            <section class="section">
+              <h3 class="section-title-large">适用场景</h3>
+              <p class="text-block" id="detailScenario"></p>
+            </section>
+
+            <section class="section">
+              <h3 class="section-title-large">安装步骤</h3>
+              <ol class="steps" id="detailSteps"></ol>
+              <div class="code-block">
+                <button class="copy-code" id="copyCommandButton" title="复制命令" aria-label="复制命令">⧉</button>
+                <code id="detailCommand"></code>
+              </div>
+            </section>
+
+            <section class="section">
+              <h3 class="section-title-large">备注</h3>
+              <p class="text-block" id="detailNotes"></p>
+            </section>
+
+            <section class="section">
+              <h3 class="section-title-large">条目信息</h3>
+              <div class="fact-list">
+                <div class="fact"><strong>平台</strong><span id="detailPlatforms"></span></div>
+                <div class="fact"><strong>来源</strong><a class="link-like" href="#" id="detailSource">打开链接</a></div>
+                <div class="fact"><strong>创建</strong><span id="detailCreated"></span></div>
+                <div class="fact"><strong>更新</strong><span id="detailUpdated"></span></div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <form class="editor" id="editor">
+          <div class="detail-title-row">
+            <div>
+              <h2 class="detail-title">编辑 Skill</h2>
+              <p class="detail-desc">编辑态保留在右侧，不打断列表上下文。</p>
+            </div>
+            <span class="status-badge">本地草稿</span>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="fieldName">名称</label>
+              <input id="fieldName" required />
+            </div>
+            <div class="field">
+              <label for="fieldPlatforms">兼容平台</label>
+              <input id="fieldPlatforms" />
+            </div>
+            <div class="field wide">
+              <label for="fieldDesc">简短介绍</label>
+              <input id="fieldDesc" required />
+            </div>
+            <div class="field wide">
+              <label for="fieldTags">标签</label>
+              <input id="fieldTags" />
+            </div>
+            <div class="field wide">
+              <label for="fieldScenario">适用场景</label>
+              <textarea id="fieldScenario"></textarea>
+            </div>
+            <div class="field wide">
+              <label for="fieldSteps">安装步骤</label>
+              <textarea id="fieldSteps"></textarea>
+            </div>
+            <div class="field wide">
+              <label for="fieldCommand">安装命令</label>
+              <textarea id="fieldCommand"></textarea>
+            </div>
+            <div class="field wide">
+              <label for="fieldSource">来源链接</label>
+              <input id="fieldSource" />
+            </div>
+            <div class="field wide">
+              <label for="fieldNotes">备注</label>
+              <textarea id="fieldNotes"></textarea>
+            </div>
+          </div>
+
+          <div class="editor-actions">
+            <button type="button" class="secondary-button" id="cancelEditButton">取消</button>
+            <button type="button" class="primary-button" id="saveEditButton">保存</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast">已复制</div>
+
+  <script>
+    const skills = [
+      {
+        id: "frontend-design",
+        name: "frontend-design",
+        desc: "创建高质量前端界面、页面和可交互原型。",
+        tags: ["前端", "UI", "原型"],
+        scenario: "当需要把产品想法转成可看的 Web 界面、桌面端页面或组件原型时使用。",
+        steps: ["确认界面目标和信息架构。", "生成 HTML/CSS/JS 或前端组件。", "用截图或浏览器检查布局和交互。"],
+        command: "codex skill install frontend-design",
+        source: "C:/Users/lemon/.agents/skills/frontend-design/SKILL.md",
+        platforms: "Windows, Codex",
+        notes: "适合做视觉方案和高保真原型，正式接入 Electron 时可复用布局结构。",
+        created: "2026-08-18",
+        updated: "2026-08-22"
+      },
+      {
+        id: "lark-doc",
+        name: "lark-doc",
+        desc: "读取和编辑飞书云文档内容。",
+        tags: ["飞书", "文档处理", "自动化"],
+        scenario: "当用户给出飞书或 doubao 文档链接，需要读取、创建或编辑文档正文时使用。",
+        steps: ["确认文档 URL 或 token。", "检查权限和认证状态。", "调用对应文档接口读取或修改内容。"],
+        command: "lark-cli doc read --url <doc-url>",
+        source: "C:/Users/lemon/.agents/skills/lark-doc/SKILL.md",
+        platforms: "Windows, macOS, Codex",
+        notes: "不负责表格、Base 或云盘文件管理，这些任务应切到对应 Skill。",
+        created: "2026-08-12",
+        updated: "2026-08-21"
+      },
+      {
+        id: "spreadsheets",
+        name: "spreadsheets",
+        desc: "创建、编辑、分析和验证独立表格文件。",
+        tags: ["数据分析", "文档处理"],
+        scenario: "当需要处理 xlsx、csv、tsv 文件，生成可交付表格或做公式验证时使用。",
+        steps: ["读取表格文件和用户目标。", "分析数据结构、公式和格式要求。", "输出更新后的表格并做基本校验。"],
+        command: "codex skill install spreadsheets",
+        source: "C:/Users/lemon/.codex/plugins/cache/openai-primary-runtime/spreadsheets",
+        platforms: "Windows, Codex",
+        notes: "不用于实时控制打开中的 Excel 会话。",
+        created: "2026-08-15",
+        updated: "2026-08-20"
+      },
+      {
+        id: "systematic-debugging",
+        name: "systematic-debugging",
+        desc: "用证据驱动方式定位 bug 和异常行为。",
+        tags: ["自动化", "调试"],
+        scenario: "当遇到测试失败、线上异常、无法解释的行为时，先用该 Skill 建立复现和根因链路。",
+        steps: ["复现问题并记录实际行为。", "收集日志、状态和最小触发条件。", "一次只验证一个假设。"],
+        command: "codex skill install systematic-debugging",
+        source: "D:/codes/codex_data/SkillCore/.codex/skills/systematic-debugging/SKILL.md",
+        platforms: "Windows, Codex",
+        notes: "适合复杂 bug，不适合跳过证据直接猜测修复。",
+        created: "2026-08-10",
+        updated: "2026-08-19"
+      }
+    ];
+
+    const state = {
+      activeId: skills[0].id,
+      filter: "all",
+      query: "",
+      sort: "updated"
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function uniqueTags() {
+      return [...new Set(skills.flatMap((skill) => skill.tags))];
+    }
+
+    function byDateDesc(field) {
+      return (a, b) => b[field].localeCompare(a[field]);
+    }
+
+    function filteredSkills() {
+      const query = state.query.trim().toLowerCase();
+      let list = skills.filter((skill) => {
+        const matchesFilter =
+          state.filter === "all" ||
+          (state.filter === "recent" && skills.slice(0, 3).some((item) => item.id === skill.id)) ||
+          (state.filter === "uncategorized" && skill.tags.length === 0) ||
+          skill.tags.includes(state.filter);
+
+        const haystack = [
+          skill.name,
+          skill.desc,
+          skill.tags.join(" "),
+          skill.scenario,
+          skill.command
+        ].join(" ").toLowerCase();
+
+        return matchesFilter && (!query || haystack.includes(query));
+      });
+
+      if (state.sort === "name") {
+        list = list.sort((a, b) => a.name.localeCompare(b.name));
+      } else if (state.sort === "created") {
+        list = list.sort(byDateDesc("created"));
+      } else {
+        list = list.sort(byDateDesc("updated"));
+      }
+
+      return list;
+    }
+
+    function renderTags() {
+      const tagNav = $("tagNav");
+      tagNav.querySelectorAll(".tag-item").forEach((item) => item.remove());
+
+      uniqueTags().forEach((tag) => {
+        const count = skills.filter((skill) => skill.tags.includes(tag)).length;
+        const button = document.createElement("button");
+        button.className = "tag-item" + (state.filter === tag ? " active" : "");
+        button.dataset.filter = tag;
+        button.innerHTML = `<span class="nav-label"><span>#</span><span>${tag}</span></span><span class="count">${count}</span>`;
+        button.addEventListener("click", () => setFilter(tag));
+        tagNav.appendChild(button);
+      });
+    }
+
+    function renderList() {
+      const list = filteredSkills();
+      const listEl = $("skillList");
+      listEl.innerHTML = "";
+      $("resultCount").textContent = `${list.length} 项`;
+      $("allCount").textContent = skills.length;
+      $("emptyList").classList.toggle("active", list.length === 0);
+
+      list.forEach((skill) => {
+        const card = document.createElement("button");
+        card.className = "skill-card" + (skill.id === state.activeId ? " active" : "");
+        card.innerHTML = `
+          <div class="card-top">
+            <h3 class="skill-name">${skill.name}</h3>
+            <span class="source-dot" title="有来源链接"></span>
+          </div>
+          <p class="skill-desc">${skill.desc}</p>
+          <div class="tag-line">${skill.tags.map((tag) => `<span class="chip">${tag}</span>`).join("")}</div>
+          <div class="meta-line"><span>${skill.updated}</span><span>安装说明可复制</span></div>
+        `;
+        card.addEventListener("click", () => {
+          state.activeId = skill.id;
+          showViewer();
+          render();
+        });
+        listEl.appendChild(card);
+      });
+
+      if (list.length > 0 && !list.some((skill) => skill.id === state.activeId)) {
+        state.activeId = list[0].id;
+      }
+    }
+
+    function activeSkill() {
+      return skills.find((skill) => skill.id === state.activeId) || skills[0];
+    }
+
+    function renderDetail() {
+      const skill = activeSkill();
+      $("crumbName").textContent = skill.name;
+      $("detailName").textContent = skill.name;
+      $("detailDesc").textContent = skill.desc;
+      $("detailTags").innerHTML = skill.tags.map((tag) => `<span class="chip">${tag}</span>`).join("");
+      $("detailScenario").textContent = skill.scenario;
+      $("detailSteps").innerHTML = skill.steps.map((step) => `<li>${step}</li>`).join("");
+      $("detailCommand").textContent = skill.command;
+      $("detailNotes").textContent = skill.notes;
+      $("detailPlatforms").textContent = skill.platforms;
+      $("detailSource").textContent = skill.source;
+      $("detailSource").href = skill.source.startsWith("http") ? skill.source : "#";
+      $("detailCreated").textContent = skill.created;
+      $("detailUpdated").textContent = skill.updated;
+    }
+
+    function renderNav() {
+      document.querySelectorAll(".nav-item").forEach((item) => {
+        item.classList.toggle("active", item.dataset.filter === state.filter);
+        item.addEventListener("click", () => setFilter(item.dataset.filter));
+      });
+    }
+
+    function render() {
+      renderTags();
+      renderNav();
+      renderList();
+      renderDetail();
+    }
+
+    function setFilter(filter) {
+      state.filter = filter;
+      render();
+    }
+
+    function toast(message) {
+      const el = $("toast");
+      el.textContent = message;
+      el.classList.add("show");
+      window.clearTimeout(toast.timer);
+      toast.timer = window.setTimeout(() => el.classList.remove("show"), 1600);
+    }
+
+    async function copyText(text, message) {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        const area = document.createElement("textarea");
+        area.value = text;
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand("copy");
+        area.remove();
+      }
+      toast(message);
+    }
+
+    function showEditor() {
+      const skill = activeSkill();
+      $("aiImportPanel").classList.remove("active");
+      $("viewer").classList.add("hidden");
+      $("viewer").classList.remove("active");
+      $("editor").classList.add("active");
+      $("detailPane").classList.remove("ai-mode");
+      $("fieldName").value = skill.name;
+      $("fieldDesc").value = skill.desc;
+      $("fieldTags").value = skill.tags.join(", ");
+      $("fieldScenario").value = skill.scenario;
+      $("fieldSteps").value = skill.steps.join("\n");
+      $("fieldCommand").value = skill.command;
+      $("fieldSource").value = skill.source;
+      $("fieldPlatforms").value = skill.platforms;
+      $("fieldNotes").value = skill.notes;
+    }
+
+    function showViewer() {
+      $("aiImportPanel").classList.remove("active");
+      $("editor").classList.remove("active");
+      $("viewer").classList.remove("hidden");
+      $("viewer").classList.add("active");
+      $("detailPane").classList.remove("ai-mode");
+    }
+
+    function showAiImport() {
+      $("editor").classList.remove("active");
+      $("viewer").classList.add("hidden");
+      $("viewer").classList.remove("active");
+      $("aiImportPanel").classList.add("active");
+      $("detailPane").classList.add("ai-mode");
+      $("crumbName").textContent = "AI 导入";
+    }
+
+    $("searchInput").addEventListener("input", (event) => {
+      state.query = event.target.value;
+      render();
+    });
+
+    $("sortSelect").addEventListener("change", (event) => {
+      state.sort = event.target.value;
+      render();
+    });
+
+    $("copyCommandButton").addEventListener("click", () => {
+      copyText(activeSkill().command, "安装命令已复制");
+    });
+
+    $("copyAllButton").addEventListener("click", () => {
+      const skill = activeSkill();
+      copyText(`${skill.name}\n\n${skill.desc}\n\n安装步骤:\n${skill.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}\n\n命令:\n${skill.command}`, "完整说明已复制");
+    });
+
+    $("editButton").addEventListener("click", showEditor);
+    $("aiImportButton").addEventListener("click", showAiImport);
+    $("manualCreateButton").addEventListener("click", () => $("newButton").click());
+    $("cancelEditButton").addEventListener("click", showViewer);
+    $("saveEditButton").addEventListener("click", () => {
+      toast("原型中已模拟保存");
+      showViewer();
+    });
+    $("newButton").addEventListener("click", () => {
+      showEditor();
+      $("fieldName").value = "";
+      $("fieldDesc").value = "";
+      $("fieldTags").value = "";
+      $("fieldScenario").value = "";
+      $("fieldSteps").value = "";
+      $("fieldCommand").value = "";
+      $("fieldSource").value = "";
+      $("fieldPlatforms").value = "Windows, Codex";
+      $("fieldNotes").value = "";
+      $("fieldName").focus();
+    });
+    $("deleteButton").addEventListener("click", () => {
+      toast("原型中不执行删除，仅展示入口");
+    });
+    $("aiGenerateButton").addEventListener("click", () => {
+      const url = $("aiUrl").value.trim() || "用户提供的网址";
+      $("aiSourcePreview").textContent = `已模拟联网检索：${url}，并提取 README、安装命令、适用场景和来源信息。`;
+      $("aiDraftGrid").innerHTML = `
+        <div class="draft-item"><strong>名称</strong><span>awesome-skill</span></div>
+        <div class="draft-item"><strong>标签</strong><span>自动化, 文档处理</span></div>
+        <div class="draft-item"><strong>安装方法</strong><span>生成安装说明与可复制命令</span></div>
+      `;
+      toast("已生成可编辑草稿");
+    });
+    $("saveDraftButton").addEventListener("click", () => {
+      toast("原型中已模拟保存 AI 草稿");
+    });
+
+    render();
+    showAiImport();
+  </script>
+</body>
+</html>
