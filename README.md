@@ -2,7 +2,7 @@
 
 SkillCore 是一个 Windows 优先的本地个人 Skill 仓库桌面应用，用来收藏、整理和维护常用 Skill 条目。每个条目聚焦于简短介绍、适用场景、标签、来源链接、安装步骤和可复制的安装命令。
 
-![SkillCore GUI prototype](prototype/skill-repository-gui.png)
+![SkillCore GUI screenshot](prototype/skill-repository-gui.png)
 
 ## 当前能力
 
@@ -50,6 +50,8 @@ npm run start
 
 ## 验证命令
 
+在项目根目录执行验证命令：
+
 ```powershell
 npm test
 npm run typecheck
@@ -57,7 +59,21 @@ npm run build
 npm run smoke
 ```
 
+本次详情页左侧“常用Skill”显示问题对应的专项回归测试是：
+
+```powershell
+npm test -- tests/detail-sidebar-layout.test.ts
+```
+
 `npm run smoke` 会以无窗口模式启动 Electron，并在渲染进程就绪后输出 `skill-repository-gui:smoke-ready`。
+
+需要手动查看界面时，先运行：
+
+```powershell
+npm run dev
+```
+
+在打开的桌面窗口中点击任意 Skill 进入详情页，左侧导航仍应显示“常用Skill”和常用条目。
 
 ## Windows 打包
 
