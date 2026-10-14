@@ -127,6 +127,48 @@ prototype/    静态 GUI 原型和截图
 build/        应用图标资源
 ```
 
+## 系统架构
+
+SkillCore 采用 Electron 桌面架构：React 渲染器负责界面交互，通过 preload 暴露的 IPC API 调用 Electron 主进程；主进程把 Skill 数据交给 SQLite 持久化，并按需访问本地 JSON 文件和 DeepSeek API。
+
+```mermaid
+flowchart LR
+  subgraph UI[交互层]
+    U((用户)) --> R[React 渲染器<br/>src/renderer · Vite]
+  end
+
+  subgraph CORE[本地运行时]
+    P[Preload Bridge<br/>contextBridge · typed API]
+    M[[Electron 主进程<br/>window · IPC · lifecycle]]
+    S[Skill Store<br/>CRUD · normalize · AI draft]
+    P --> M --> S
+  end
+
+  subgraph DATA[状态与增强]
+    DB[(SQLite<br/>skills.sqlite · WAL)]
+    AI([DeepSeek API<br/>/models · /chat/completions])
+    IO[/JSON 文件交换<br/>open/save dialog/]
+  end
+
+  R -->|typed IPC| P
+  S -->|SQL| DB
+  S -->|HTTPS| AI
+  M -.->|JSON I/O| IO
+
+  classDef input fill:#eef0f2,stroke:#5a6580,color:#2d3142
+  classDef local fill:#fff,stroke:#2d3142,color:#2d3142
+  classDef focal fill:#faeee9,stroke:#bf4520,stroke-width:2px,color:#2d3142
+  classDef store fill:#f0f1f2,stroke:#4f5d75,color:#2d3142
+  classDef external fill:#f7f7f7,stroke:#73809a,color:#2d3142
+  class U input
+  class R,P,S local
+  class M focal
+  class DB store
+  class AI,IO external
+```
+
+完整的可独立打开版本见：[SkillCore 架构图](docs/skillcore-architecture.html)。
+
 ## 相关文档
 
 - [GUI 设计稿](docs/prd/skill-repository-gui-design.md)
