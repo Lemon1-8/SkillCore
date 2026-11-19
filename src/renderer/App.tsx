@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import type { FormEvent, ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { FormEvent, KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import {
+  Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Copy,
@@ -13,6 +15,7 @@ import {
   Folder,
   Heart,
   FileArchive,
+  Plus,
   Save,
   Search,
   Settings,
@@ -22,7 +25,8 @@ import {
   WifiOff
 } from "lucide-react";
 import { hasModelConnectionApi } from "../shared/api";
-import { collectCategories, collectCommonSkills, filterSortSkills } from "../shared/skill-filters";
+import { collectCategories, collectCommonSkills, filterSortSkills, isNewCategory, suggestCategories } from "../shared/skill-filters";
+import type { CategoryOption } from "../shared/skill-filters";
 import type {
   AiImportResult,
   ModelConnectionTestResult,
@@ -794,6 +798,7 @@ export function App() {
           {mode === "edit" && (
             <SkillEditor
               form={editorForm}
+              categories={categories}
               onChange={updateEditorField}
               onSubmit={saveEditor}
               onCancel={() => {
@@ -1169,6 +1174,7 @@ function SkillDetail(props: {
 
 function SkillEditor(props: {
   form: EditorForm;
+  categories: CategoryOption[];
   onChange: (field: keyof EditorForm, value: string) => void;
   onSubmit: (event: FormEvent) => Promise<void>;
   onCancel: () => void;
@@ -1198,7 +1204,12 @@ function SkillEditor(props: {
           <input id="fieldSummary" required value={props.form.summary} onChange={(event) => props.onChange("summary", event.target.value)} />
         </Field>
         <Field label="分类" id="fieldCategory" wide>
-          <input id="fieldCategory" placeholder="留空为未分类" value={props.form.category} onChange={(event) => props.onChange("category", event.target.value)} />
+          <CategoryPicker
+            id="fieldCategory"
+            categories={props.categories}
+            value={props.form.category}
+            onChange={(value) => props.onChange("category", value)}
+          />
         </Field>
         <Field label="适用场景" id="fieldScenario" wide>
           <textarea id="fieldScenario" value={props.form.scenario} onChange={(event) => props.onChange("scenario", event.target.value)} />
@@ -1225,6 +1236,184 @@ function SkillEditor(props: {
         </div>
       </div>
     </form>
+  );
+}
+
+interface CategoryMenuRow {
+  key: string;
+  name: string;
+  count?: number;
+  kind: "create" | "option";
+}
+
+function CategoryPicker(props: {
+  id: string;
+  categories: CategoryOption[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [query, setQuery] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const menuId = `${props.id}-menu`;
+  const trimmedValue = props.value.trim();
+  const createName = isNewCategory(props.categories, props.value) ? trimmedValue : "";
+  const suggestions = useMemo(() => suggestCategories(props.categories, query), [props.categories, query]);
+  const rows: CategoryMenuRow[] = [
+    ...(createName ? [{ key: "create", name: createName, kind: "create" as const }] : []),
+    ...suggestions.map((category) => ({ key: `category-${category.name}`, name: category.name, count: category.count, kind: "option" as const }))
+  ];
+  const activeRow = open && activeIndex >= 0 ? rows[activeIndex] : undefined;
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent): void {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [open]);
+
+  function openMenu(): void {
+    setQuery("");
+    setOpen(true);
+  }
+
+  function selectRow(row: CategoryMenuRow): void {
+    props.onChange(row.name);
+    setOpen(false);
+    setActiveIndex(-1);
+    setQuery("");
+  }
+
+  function handleKeyDown(event: ReactKeyboardEvent<HTMLInputElement>): void {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (!open) {
+        openMenu();
+        setActiveIndex(0);
+        return;
+      }
+      setActiveIndex(rows.length === 0 ? -1 : (activeIndex + 1) % rows.length);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!open) {
+        openMenu();
+        setActiveIndex(-1);
+        return;
+      }
+      setActiveIndex(rows.length === 0 || activeIndex <= 0 ? rows.length - 1 : activeIndex - 1);
+      return;
+    }
+
+    if (event.key === "Enter" && open) {
+      event.preventDefault();
+      if (activeRow) {
+        selectRow(activeRow);
+      } else {
+        setOpen(false);
+      }
+      return;
+    }
+
+    if (event.key === "Escape") {
+      setOpen(false);
+      return;
+    }
+
+    if (event.key === "Tab") {
+      setOpen(false);
+    }
+  }
+
+  return (
+    <div className="category-picker" ref={rootRef}>
+      <div className="category-input-row">
+        <input
+          id={props.id}
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={menuId}
+          aria-autocomplete="list"
+          aria-activedescendant={activeRow ? `${props.id}-row-${activeIndex}` : undefined}
+          autoComplete="off"
+          placeholder="选择已有分类，或直接输入新分类"
+          value={props.value}
+          onChange={(event) => {
+            props.onChange(event.target.value);
+            setQuery(event.target.value);
+            setOpen(true);
+            setActiveIndex(-1);
+          }}
+          onClick={openMenu}
+          onFocus={openMenu}
+          onKeyDown={handleKeyDown}
+        />
+        <button
+          type="button"
+          className="category-toggle"
+          title={open ? "收起已有分类" : "展开已有分类"}
+          aria-label={open ? "收起已有分类" : "展开已有分类"}
+          aria-expanded={open}
+          aria-controls={menuId}
+          onClick={() => {
+            if (open) {
+              setOpen(false);
+            } else {
+              openMenu();
+            }
+            setActiveIndex(-1);
+          }}
+        >
+          <ChevronDown size={16} />
+        </button>
+      </div>
+
+      {open && (
+        <div className="category-menu" id={menuId} role="listbox" aria-label="已有分类">
+          {rows.length === 0 ? (
+            <p className="category-menu-empty">
+              {props.categories.length === 0
+                ? "还没有已有分类，直接输入名称就能新建"
+                : createName
+                  ? "没有匹配的分类，保存后会新建"
+                  : "没有匹配的分类"}
+            </p>
+          ) : (
+            rows.map((row, index) => (
+              <div
+                key={row.key}
+                id={`${props.id}-row-${index}`}
+                role="option"
+                aria-selected={row.kind === "option" && row.name === trimmedValue}
+                className={`category-option ${row.kind} ${index === activeIndex ? "active" : ""}`}
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={() => selectRow(row)}
+              >
+                {row.kind === "create" ? <Plus size={15} /> : <Folder size={15} />}
+                <span className="category-option-name">
+                  {row.kind === "create" ? `新建分类「${row.name}」` : row.name}
+                </span>
+                {typeof row.count === "number" && <span className="category-option-count">{row.count}</span>}
+                {row.kind === "option" && row.name === trimmedValue && <Check size={14} />}
+              </div>
+            ))
+          )}
+          <p className="category-menu-hint">留空保存为未分类</p>
+        </div>
+      )}
+    </div>
   );
 }
 

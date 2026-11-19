@@ -68,6 +68,30 @@ export function collectCategories(skills: SkillRecord[], defaults: string[] = []
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export interface CategoryOption {
+  name: string;
+  count: number;
+}
+
+export function suggestCategories(categories: CategoryOption[], query: string): CategoryOption[] {
+  const needle = query.trim().toLocaleLowerCase();
+
+  return categories
+    .filter((category) => !needle || category.name.toLocaleLowerCase().includes(needle))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "zh-CN"));
+}
+
+export function isNewCategory(categories: Array<{ name: string }>, value: string): boolean {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return false;
+  }
+
+  const needle = trimmed.toLocaleLowerCase();
+  return !categories.some((category) => category.name.toLocaleLowerCase() === needle);
+}
+
 export function collectCommonSkills(skills: SkillRecord[]): SkillRecord[] {
   return [...skills]
     .filter((skill) => skill.favorite || skill.viewCount > 0)

@@ -15,6 +15,7 @@
     "package:win": "npm run build && electron-builder --win nsis portable --x64",
     "test": "vitest run",
     "test:archive-ui": "npm run build && node scripts/test-archive-electron.mjs",
+    "test:category-ui": "npm run build && node scripts/test-category-picker-ui.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.main.json --noEmit"
   },
   "keywords": [
