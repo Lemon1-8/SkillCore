@@ -23,6 +23,14 @@ const api: SkillRepositoryApi = {
     return ipcRenderer.invoke(ipcChannels.createSkill, input);
   },
 
+  importSkillArchive() {
+    return ipcRenderer.invoke(ipcChannels.importSkillArchive);
+  },
+
+  exportSkillArchive(id: string) {
+    return ipcRenderer.invoke(ipcChannels.exportSkillArchive, id);
+  },
+
   updateSkill(id: string, patch: SkillUpdate) {
     return ipcRenderer.invoke(ipcChannels.updateSkill, id, patch);
   },
@@ -49,6 +57,10 @@ const api: SkillRepositoryApi = {
 
   updateModelConfig(input: ModelConfigInput) {
     return ipcRenderer.invoke(ipcChannels.updateModelConfig, input);
+  },
+
+  revealModelApiKey() {
+    return ipcRenderer.invoke(ipcChannels.revealModelApiKey);
   },
 
   testModelConnection(input: ModelConnectionTestInput) {

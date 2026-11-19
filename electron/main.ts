@@ -1,8 +1,11 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell, type OpenDialogOptions, type SaveDialogOptions } from "electron";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { open, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { ipcChannels } from "../src/shared/api";
 import { createSkillStore, type SkillStore } from "../src/main/skill-store";
+import { maxArchiveBytes } from "../src/main/skill-archive";
+import type { SkillArchiveImportResponse } from "../src/shared/api";
 import type {
   AiImportRequest,
   ImportConflictMode,
@@ -114,6 +117,55 @@ function registerIpcHandlers(): void {
   ipcMain.handle(ipcChannels.listSkills, (_event, filters: SkillListFilters) => getStore().list(filters));
   ipcMain.handle(ipcChannels.getSkill, (_event, id: string) => getStore().get(id));
   ipcMain.handle(ipcChannels.createSkill, (_event, input: SkillInput) => getStore().create(input));
+  ipcMain.handle(ipcChannels.importSkillArchive, async (): Promise<SkillArchiveImportResponse> => {
+    let fileName: string | undefined;
+    try {
+      const options: OpenDialogOptions = {
+        title: "导入 Skill ZIP",
+        properties: ["openFile"],
+        filters: [{ name: "Skill ZIP 压缩包", extensions: ["zip"] }]
+      };
+      const selection = mainWindow ? await dialog.showOpenDialog(mainWindow, options) : await dialog.showOpenDialog(options);
+      if (selection.canceled || !selection.filePaths.length) return { status: "canceled" };
+      const filePath = selection.filePaths[0];
+      fileName = path.basename(filePath);
+      if (path.extname(filePath).toLowerCase() !== ".zip") {
+        return { status: "invalid", fileName, message: "请选择 .zip 格式的 Skill 压缩包。" };
+      }
+      const file = await open(filePath, "r");
+      let data: Buffer;
+      try {
+        if ((await file.stat()).size > maxArchiveBytes) {
+          return { status: "invalid", fileName, message: "ZIP 文件不能超过 20 MB。" };
+        }
+        // Read at most one byte over the limit, even if the file changes after stat.
+        const chunks: Buffer[] = [];
+        for await (const chunk of file.createReadStream({ end: maxArchiveBytes, autoClose: false })) {
+          chunks.push(chunk as Buffer);
+        }
+        data = Buffer.concat(chunks);
+      } finally {
+        await file.close();
+      }
+      const skill = await getStore().importSkillArchive(data, fileName);
+      return { status: "imported", fileName, skill };
+    } catch (error) {
+      return { status: "invalid", fileName, message: error instanceof Error ? error.message : "导入 ZIP 失败，请重新选择文件。" };
+    }
+  });
+  ipcMain.handle(ipcChannels.exportSkillArchive, async (_event, id: string) => {
+    const archive = getStore().getArchive(id);
+    if (!archive) throw new Error("此 Skill 没有保存原始 ZIP。");
+    const options: SaveDialogOptions = {
+      title: "导出原始 Skill ZIP",
+      defaultPath: archive.fileName,
+      filters: [{ name: "ZIP", extensions: ["zip"] }]
+    };
+    const selection = mainWindow ? await dialog.showSaveDialog(mainWindow, options) : await dialog.showSaveDialog(options);
+    if (selection.canceled || !selection.filePath) return { canceled: true };
+    await writeFile(selection.filePath, archive.data);
+    return { canceled: false, filePath: selection.filePath };
+  });
   ipcMain.handle(ipcChannels.updateSkill, (_event, id: string, patch: SkillUpdate) => getStore().update(id, patch));
   ipcMain.handle(ipcChannels.deleteSkill, (_event, id: string) => getStore().remove(id));
   ipcMain.handle(ipcChannels.recordSkillView, (_event, id: string) => getStore().recordView(id));
@@ -121,6 +173,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle(ipcChannels.generateAiDraft, (_event, request: AiImportRequest) => getStore().generateAiDraft(request));
   ipcMain.handle(ipcChannels.getModelConfig, () => getStore().getModelConfig());
   ipcMain.handle(ipcChannels.updateModelConfig, (_event, input: ModelConfigInput) => getStore().updateModelConfig(input));
+  ipcMain.handle(ipcChannels.revealModelApiKey, () => getStore().revealModelApiKey());
   ipcMain.handle(ipcChannels.testModelConnection, (_event, input: ModelConnectionTestInput) => getStore().testModelConnection(input));
 
   ipcMain.handle(ipcChannels.importJson, async (_event, conflictMode: ImportConflictMode) => {

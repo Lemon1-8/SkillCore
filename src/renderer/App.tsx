@@ -7,10 +7,12 @@ import {
   Database,
   Edit3,
   ExternalLink,
+  Eye,
+  EyeOff,
   Filter,
   Folder,
   Heart,
-  Plus,
+  FileArchive,
   Save,
   Search,
   Settings,
@@ -33,7 +35,7 @@ import type {
 import brandAvatarUrl from "./assets/brand-avatar.png";
 import { createHomeNavigationState, homeFilters } from "./home-navigation";
 
-type WorkspaceMode = "browse" | "ai" | "view" | "edit" | "settings";
+type WorkspaceMode = "browse" | "ai" | "archive" | "view" | "edit" | "settings";
 
 interface EditorForm {
   name: string;
@@ -119,7 +121,7 @@ function inputFromForm(form: EditorForm): SkillInput {
     installCommands: splitLines(form.installCommands),
     sourceUrl: form.sourceUrl.trim(),
     platforms: splitComma(form.platforms),
-    notes: form.notes.trim()
+    notes: form.notes
   };
 }
 
@@ -182,6 +184,8 @@ export function App() {
   const [allowWebAccess, setAllowWebAccess] = useState(true);
   const [aiDraft, setAiDraft] = useState<AiImportResult>();
   const [aiBusy, setAiBusy] = useState(false);
+  const [archiveBusy, setArchiveBusy] = useState(false);
+  const [archiveError, setArchiveError] = useState<{ message: string; fileName?: string }>();
   const [modelConfig, setModelConfig] = useState<ModelConfig>();
   const [settingsForm, setSettingsForm] = useState<SettingsForm>(defaultSettingsForm);
   const [settingsDirty, setSettingsDirty] = useState(false);
@@ -239,6 +243,10 @@ export function App() {
   }
 
   function canLeaveEditor(): boolean {
+    if (archiveBusy) {
+      showToast("正在解析 ZIP，请稍候");
+      return false;
+    }
     return mode !== "edit" || !editorDirty || window.confirm("放弃未保存的修改？");
   }
 
@@ -311,15 +319,48 @@ export function App() {
     });
   }
 
-  function openNewSkill(): void {
+  function openArchiveImport(): void {
     if (!canLeaveEditor()) {
       return;
     }
 
-    setEditingId(undefined);
-    setEditorForm(emptyForm);
-    setEditorDirty(false);
-    setMode("edit");
+    setArchiveError(undefined);
+    setMode("archive");
+    void importSkillArchive();
+  }
+
+  async function importSkillArchive(): Promise<void> {
+    if (archiveBusy) return;
+    setArchiveBusy(true);
+    setArchiveError(undefined);
+    try {
+      if (typeof window.skillRepo.importSkillArchive !== "function") {
+        throw new Error("请重新启动应用以启用 ZIP 导入。");
+      }
+      const result = await window.skillRepo.importSkillArchive();
+      if (result.status === "invalid") {
+        setArchiveError({ message: result.message, fileName: result.fileName });
+      } else if (result.status === "imported") {
+        setSkills((current) => [result.skill, ...current]);
+        setActiveId(result.skill.id);
+        setFilters(defaultFilters);
+        setMode("view");
+        showToast(`已导入「${result.skill.name}」`);
+      }
+    } catch (error) {
+      setArchiveError({ message: error instanceof Error ? error.message : "ZIP 导入失败，请重试。" });
+    } finally {
+      setArchiveBusy(false);
+    }
+  }
+
+  async function exportSkillArchive(skill: SkillRecord): Promise<void> {
+    try {
+      const result = await window.skillRepo.exportSkillArchive(skill.id);
+      if (!result.canceled) showToast("原始 ZIP 已导出");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "导出原始 ZIP 失败");
+    }
   }
 
   function openEditor(skill: SkillRecord): void {
@@ -464,6 +505,28 @@ export function App() {
     }
   }
 
+  async function revealModelApiKey(): Promise<string | undefined> {
+    try {
+      const savedKey = (await window.skillRepo.revealModelApiKey()).trim();
+      if (!savedKey) {
+        showToast("尚未保存 API Key");
+        return undefined;
+      }
+
+      return savedKey;
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "读取 API Key 失败");
+      return undefined;
+    }
+  }
+
+  async function copyModelApiKey(): Promise<void> {
+    const savedKey = await revealModelApiKey();
+    if (savedKey) {
+      await copyText(savedKey, "API Key 已复制");
+    }
+  }
+
   async function testModelConnection(): Promise<void> {
     const baseUrl = settingsForm.baseUrl.trim();
     const model = settingsForm.model.trim();
@@ -523,7 +586,7 @@ export function App() {
       : filters.filter === "uncategorized"
         ? "没有未分类 Skill"
         : "没有找到匹配的 Skill";
-  const emptyAction = skills.length === 0 ? "新建 Skill 或使用 AI 导入" : filters.filter !== "all" ? "查看全部 Skills" : "清空搜索";
+  const emptyAction = skills.length === 0 ? "导入 Skill ZIP 或使用 AI 导入" : filters.filter !== "all" ? "查看全部 Skills" : "清空搜索";
 
   return (
     <main className={`app-shell ${collapseListPane ? "list-pane-collapsed" : ""} ${browsingCardsOnly ? "browse-mode" : ""} ${hasSkillDetail ? "detail-active" : ""}`}>
@@ -601,8 +664,8 @@ export function App() {
                   <Sparkles size={16} />
                   AI 导入
                 </button>
-                <button className="icon-button" title="手动新建 Skill" aria-label="手动新建 Skill" onClick={openNewSkill}>
-                  <Plus size={19} />
+                <button className="icon-button" title="导入 Skill ZIP" aria-label="导入 Skill ZIP" onClick={openArchiveImport} disabled={archiveBusy}>
+                  <FileArchive size={19} />
                 </button>
                 {!browsingCardsOnly && (
                   <button className="tool-toggle-button icon-only" title="收起 Skill 列表" aria-label="收起 Skill 列表" onClick={() => setListToolsCollapsed(true)}>
@@ -644,8 +707,8 @@ export function App() {
                     <button className="secondary-button" onClick={() => setFilters(defaultFilters)}>
                       清空筛选
                     </button>
-                    <button className="primary-button" onClick={openNewSkill}>
-                      新建 Skill
+                    <button className="primary-button" onClick={openArchiveImport} disabled={archiveBusy}>
+                      导入 Skill ZIP
                     </button>
                   </div>
                 </div>
@@ -657,7 +720,7 @@ export function App() {
 
       {!browsingCardsOnly && <section className={`detail-pane ${mode === "ai" ? "ai-mode" : ""}`} aria-label="Skill 详情">
         <div className="detail-toolbar">
-          <div className="crumb">Skill / <span>{mode === "ai" ? "AI 导入" : mode === "edit" ? "编辑" : mode === "settings" ? "设置" : activeSkill?.name ?? "详情"}</span></div>
+          <div className="crumb">Skill / <span>{mode === "ai" ? "AI 导入" : mode === "archive" ? "ZIP 导入" : mode === "edit" ? "编辑" : mode === "settings" ? "设置" : activeSkill?.name ?? "详情"}</span></div>
           {mode === "view" && activeSkill && (
             <div className="toolbar-actions">
               <button className="secondary-button" onClick={() => copyText(fullInstructions(activeSkill), "完整说明已复制")}>
@@ -693,16 +756,21 @@ export function App() {
               onAllowWebAccessChange={setAllowWebAccess}
               onGenerate={generateAiDraft}
               onSaveDraft={saveAiDraft}
-              onManualCreate={openNewSkill}
+              onArchiveImport={openArchiveImport}
             />
           )}
 
+          {mode === "archive" && (
+            <SkillArchivePanel busy={archiveBusy} error={archiveError} onImport={importSkillArchive} />
+          )}
+
           {mode === "view" && activeSkill && (
-            <SkillDetail skill={activeSkill} onCopyCommand={copyText} onOpenSource={openSource} />
+            <SkillDetail skill={activeSkill} onCopyCommand={copyText} onOpenSource={openSource} onExportArchive={exportSkillArchive} />
           )}
 
           {mode === "settings" && (
             <ModelSettingsPanel
+              key={modelConfig?.updatedAt ?? "unsaved"}
               config={modelConfig}
               form={settingsForm}
               dirty={settingsDirty}
@@ -717,13 +785,14 @@ export function App() {
                 setConnectionResult(undefined);
               }}
               onClearApiKey={clearModelApiKey}
+              onRevealApiKey={revealModelApiKey}
+              onCopyApiKey={copyModelApiKey}
             />
           )}
 
           {mode === "edit" && (
             <SkillEditor
               form={editorForm}
-              editing={Boolean(editingId)}
               onChange={updateEditorField}
               onSubmit={saveEditor}
               onCancel={() => {
@@ -740,6 +809,42 @@ export function App() {
 
       <div className={`toast ${toast ? "show" : ""}`}>{toast}</div>
     </main>
+  );
+}
+
+function SkillArchivePanel(props: {
+  busy: boolean;
+  error?: { message: string; fileName?: string };
+  onImport: () => Promise<void>;
+}) {
+  return (
+    <section className="settings-panel archive-panel" aria-labelledby="archive-title" aria-busy={props.busy}>
+      <span className="status-badge"><FileArchive size={15} />本地 ZIP 导入</span>
+      <h2 className="workspace-title" id="archive-title">导入 Skill 压缩包</h2>
+      <p className="workspace-desc">选择包含单个 Skill 的 ZIP。校验通过后自动保存名称、简介和完整正文，同时保留原始压缩包及附件。</p>
+      <div className="archive-guide">
+        <strong>压缩包需要包含</strong>
+        <code>skill-name/SKILL.md</code>
+        <span>也支持 SKILL.md 直接位于压缩包根目录。</span>
+        <span>SKILL.md 开头需包含 YAML 元数据：name 和 description。</span>
+        <span>支持 argument-hint 等 Claude Code 扩展字段。</span>
+        <span>scripts、references、assets 等附件为可选。</span>
+        <span>ZIP 最大 20 MB，解压内容最大 100 MB，SKILL.md 最大 1 MB，最多 2000 个文件或目录。</span>
+      </div>
+      {props.error && (
+        <div className="archive-error" role="alert">
+          <strong>未能导入{props.error.fileName ? `「${props.error.fileName}」` : "压缩包"}</strong>
+          <p>{props.error.message}</p>
+          <span>修正后重新选择 ZIP 文件。</span>
+        </div>
+      )}
+      <div className="editor-actions">
+        <button className="primary-button" type="button" disabled={props.busy} onClick={() => void props.onImport()}>
+          <FileArchive size={16} />{props.busy ? "正在解析…" : "选择 ZIP 文件"}
+        </button>
+        {props.busy && <span role="status">正在校验压缩包并保存 Skill…</span>}
+      </div>
+    </section>
   );
 }
 
@@ -794,8 +899,21 @@ function ModelSettingsPanel(props: {
   onTestConnection: () => Promise<void>;
   onReset: () => void;
   onClearApiKey: () => Promise<void>;
+  onRevealApiKey: () => Promise<string | undefined>;
+  onCopyApiKey: () => Promise<void>;
 }) {
+  const [revealedKey, setRevealedKey] = useState<string>();
   const apiKeyStatus = props.config?.apiKeyConfigured ? `已保存 ${props.config.apiKeyPreview}` : "未配置";
+  const apiKeyDisplay = revealedKey ?? apiKeyStatus;
+
+  async function toggleApiKey(): Promise<void> {
+    if (revealedKey) {
+      setRevealedKey(undefined);
+      return;
+    }
+
+    setRevealedKey(await props.onRevealApiKey());
+  }
   const updatedAt = props.config?.updatedAt ? formatDate(props.config.updatedAt) : "尚未保存";
   const connectionDetail = props.connectionResult
     ? [
@@ -822,7 +940,27 @@ function ModelSettingsPanel(props: {
           <input id="modelProvider" value="DeepSeek" disabled />
         </Field>
         <Field label="当前密钥" id="apiKeyStatus">
-          <input id="apiKeyStatus" value={apiKeyStatus} disabled />
+          <div className="key-row">
+            <input id="apiKeyStatus" value={apiKeyDisplay} disabled />
+            <button
+              type="button"
+              className="mini-button"
+              disabled={!props.config?.apiKeyConfigured}
+              onClick={() => void toggleApiKey()}
+            >
+              {revealedKey ? <EyeOff size={14} /> : <Eye size={14} />}
+              {revealedKey ? "隐藏" : "显示"}
+            </button>
+            <button
+              type="button"
+              className="mini-button"
+              disabled={!props.config?.apiKeyConfigured}
+              onClick={props.onCopyApiKey}
+            >
+              <Copy size={14} />
+              复制
+            </button>
+          </div>
         </Field>
         <Field label="API Base URL" id="modelBaseUrl" wide>
           <input id="modelBaseUrl" required value={props.form.baseUrl} onChange={(event) => props.onChange("baseUrl", event.target.value)} />
@@ -844,6 +982,7 @@ function ModelSettingsPanel(props: {
       <div className="settings-meta">
         <span>更新时间：{updatedAt}</span>
         <span>AI 导入会使用此配置调用 DeepSeek。</span>
+        <span>完整 Key 只存于本机配置，点「显示」或「复制」按需取出。</span>
       </div>
 
       {props.connectionResult && (
@@ -885,7 +1024,7 @@ function AiImportPanel(props: {
   onAllowWebAccessChange: (value: boolean) => void;
   onGenerate: () => void;
   onSaveDraft: () => void;
-  onManualCreate: () => void;
+  onArchiveImport: () => void;
 }) {
   return (
     <section className="ai-import-panel">
@@ -930,9 +1069,9 @@ function AiImportPanel(props: {
         )}
 
         <div className="editor-actions">
-          <button type="button" className="secondary-button" onClick={props.onManualCreate}>
-            <Plus size={15} />
-            手动新建
+          <button type="button" className="secondary-button" onClick={props.onArchiveImport}>
+            <FileArchive size={15} />
+            导入 Skill ZIP
           </button>
           <button type="button" className="primary-button" onClick={props.onSaveDraft} disabled={!props.draft}>
             <Save size={15} />
@@ -957,6 +1096,7 @@ function SkillDetail(props: {
   skill: SkillRecord;
   onCopyCommand: (text: string, message: string) => Promise<void>;
   onOpenSource: (skill: SkillRecord) => Promise<void>;
+  onExportArchive: (skill: SkillRecord) => Promise<void>;
 }) {
   const commands = props.skill.installCommands.join("\n\n");
   const category = props.skill.category || "未分类";
@@ -1003,7 +1143,7 @@ function SkillDetail(props: {
 
         {props.skill.notes && (
           <section className="section">
-            <h3>备注</h3>
+            <h3>{props.skill.archiveName ? "Skill 正文" : "备注"}</h3>
             <p className="text-block">{props.skill.notes}</p>
           </section>
         )}
@@ -1012,6 +1152,9 @@ function SkillDetail(props: {
           <h3>条目信息</h3>
           <div className="fact-list">
             <div className="fact"><strong>分类</strong><span>{category}</span></div>
+            {props.skill.archiveName && (
+              <div className="fact"><strong>原始压缩包</strong><button className="link-button" onClick={() => void props.onExportArchive(props.skill)}>{props.skill.archiveName} · 导出原始 ZIP</button></div>
+            )}
             {props.skill.platforms.length > 0 && <div className="fact"><strong>平台</strong><span>{props.skill.platforms.join(", ")}</span></div>}
             {props.skill.sourceUrl && <div className="fact"><strong>来源</strong><button className="link-button" onClick={() => props.onOpenSource(props.skill)}>{props.skill.sourceUrl} <ExternalLink size={13} /></button></div>}
             <div className="fact"><strong>创建</strong><span>{formatDate(props.skill.createdAt)}</span></div>
@@ -1025,7 +1168,6 @@ function SkillDetail(props: {
 
 function SkillEditor(props: {
   form: EditorForm;
-  editing: boolean;
   onChange: (field: keyof EditorForm, value: string) => void;
   onSubmit: (event: FormEvent) => Promise<void>;
   onCancel: () => void;
@@ -1035,7 +1177,7 @@ function SkillEditor(props: {
     <form className="editor" onSubmit={props.onSubmit}>
       <div className="detail-title-row">
         <div>
-          <h2 className="workspace-title">{props.editing ? "编辑 Skill" : "手动新建 Skill"}</h2>
+          <h2 className="workspace-title">编辑 Skill</h2>
           <p className="workspace-desc">字段会保存到本地 SQLite，安装命令只作为文本管理。</p>
         </div>
         <span className="status-badge">

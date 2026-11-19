@@ -3,6 +3,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
 import { filterSortSkills } from "../shared/skill-filters";
+import { parseSkillArchive } from "./skill-archive";
 import type {
   AiImportRequest,
   AiImportResult,
@@ -31,6 +32,7 @@ interface SkillRow {
   source_url: string;
   platforms_json: string;
   notes: string;
+  archive_name?: string;
   view_count: number;
   last_viewed_at: string;
   favorite: number;
@@ -55,6 +57,8 @@ export interface SkillStore {
   list(filters: SkillListFilters): SkillRecord[];
   get(id: string): SkillRecord | undefined;
   create(input: SkillInput): SkillRecord;
+  importSkillArchive(data: Buffer, fileName: string): Promise<SkillRecord>;
+  getArchive(id: string): { fileName: string; data: Buffer } | undefined;
   update(id: string, patch: SkillUpdate): SkillRecord;
   remove(id: string): boolean;
   recordView(id: string): SkillRecord;
@@ -62,6 +66,7 @@ export interface SkillStore {
   generateAiDraft(request: AiImportRequest, fetchImpl?: typeof fetch): Promise<AiImportResult>;
   getModelConfig(): ModelConfig;
   updateModelConfig(input: ModelConfigInput): ModelConfig;
+  revealModelApiKey(): string;
   testModelConnection(input: ModelConnectionTestInput, fetchImpl?: typeof fetch): Promise<ModelConnectionTestResult>;
   exportJson(): SkillExportPayload;
   importJson(payload: unknown, options: ImportOptions): ImportResult;
@@ -514,7 +519,7 @@ function normalizeInput(input: SkillInput): SkillInput & { category: string } {
     installCommands: normalizeArray(input.installCommands),
     sourceUrl: input.sourceUrl.trim(),
     platforms: normalizeArray(input.platforms),
-    notes: input.notes.trim()
+    notes: input.notes
   };
 }
 
@@ -531,6 +536,7 @@ function rowToRecord(row: SkillRow): SkillRecord {
     sourceUrl: row.source_url,
     platforms: parseArray(row.platforms_json),
     notes: row.notes,
+    archiveName: row.archive_name,
     viewCount: Number(row.view_count ?? 0),
     lastViewedAt: row.last_viewed_at ?? "",
     favorite: Boolean(row.favorite),
@@ -590,6 +596,7 @@ export function createSkillStore(dbPath: string): SkillStore {
 
   const db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
+  db.pragma("foreign_keys = ON");
   db.exec(`
     CREATE TABLE IF NOT EXISTS skills (
       id TEXT PRIMARY KEY,
@@ -613,6 +620,12 @@ export function createSkillStore(dbPath: string): SkillStore {
     CREATE INDEX IF NOT EXISTS idx_skills_name ON skills(name);
     CREATE INDEX IF NOT EXISTS idx_skills_updated ON skills(updated_at);
 
+    CREATE TABLE IF NOT EXISTS skill_archives (
+      skill_id TEXT PRIMARY KEY REFERENCES skills(id) ON DELETE CASCADE,
+      file_name TEXT NOT NULL,
+      data BLOB NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS app_settings (
       key TEXT PRIMARY KEY,
       value_json TEXT NOT NULL
@@ -620,9 +633,12 @@ export function createSkillStore(dbPath: string): SkillStore {
   `);
   ensureSkillMetadataColumns(db);
 
-  const allRows = db.prepare("SELECT * FROM skills");
-  const getById = db.prepare("SELECT * FROM skills WHERE id = ?");
-  const getByName = db.prepare("SELECT * FROM skills WHERE name = ?");
+  const skillQuery = "SELECT skills.*, skill_archives.file_name AS archive_name FROM skills LEFT JOIN skill_archives ON skill_archives.skill_id = skills.id";
+  const allRows = db.prepare(skillQuery);
+  const getById = db.prepare(`${skillQuery} WHERE skills.id = ?`);
+  const getByName = db.prepare(`${skillQuery} WHERE skills.name = ?`);
+  const insertArchive = db.prepare("INSERT INTO skill_archives (skill_id, file_name, data) VALUES (?, ?, ?)");
+  const getArchive = db.prepare("SELECT file_name AS fileName, data FROM skill_archives WHERE skill_id = ?");
   const getSetting = db.prepare("SELECT * FROM app_settings WHERE key = ?");
   const upsertSetting = db.prepare(`
     INSERT INTO app_settings (key, value_json)
@@ -767,6 +783,7 @@ export function createSkillStore(dbPath: string): SkillStore {
     return {
       id,
       ...merged,
+      archiveName: existing.archiveName,
       viewCount: existing.viewCount,
       lastViewedAt: existing.lastViewedAt,
       favorite: existing.favorite,
@@ -819,6 +836,22 @@ export function createSkillStore(dbPath: string): SkillStore {
       return writeRecord(input);
     },
 
+    async importSkillArchive(data, fileName) {
+      const input = await parseSkillArchive(data);
+      return db.transaction(() => {
+        if (readByName(input.name)) {
+          throw new Error(`Skill「${input.name}」已存在，请先处理同名条目后再导入。`);
+        }
+        const record = writeRecord(input);
+        insertArchive.run(record.id, path.basename(fileName), data);
+        return readById(record.id) as SkillRecord;
+      })();
+    },
+
+    getArchive(id) {
+      return getArchive.get(id) as { fileName: string; data: Buffer } | undefined;
+    },
+
     update(id, patch) {
       return updateRecord(id, patch);
     },
@@ -841,6 +874,10 @@ export function createSkillStore(dbPath: string): SkillStore {
 
     getModelConfig() {
       return publicModelConfig(readStoredModelConfig());
+    },
+
+    revealModelApiKey() {
+      return readStoredModelConfig().apiKey;
     },
 
     updateModelConfig(input) {

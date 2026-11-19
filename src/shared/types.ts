@@ -14,6 +14,7 @@ export interface SkillRecord {
   sourceUrl: string;
   platforms: string[];
   notes: string;
+  archiveName?: string;
   viewCount: number;
   lastViewedAt: string;
   favorite: boolean;
@@ -21,7 +22,7 @@ export interface SkillRecord {
   updatedAt: string;
 }
 
-export type SkillInput = Omit<SkillRecord, "id" | "category" | "viewCount" | "lastViewedAt" | "favorite" | "createdAt" | "updatedAt"> & {
+export type SkillInput = Omit<SkillRecord, "id" | "category" | "archiveName" | "viewCount" | "lastViewedAt" | "favorite" | "createdAt" | "updatedAt"> & {
   category?: string;
 };
 
