@@ -638,8 +638,9 @@ export function App() {
         )}
 
         <div className="sidebar-footer">
-          <button className="tool-button" title="设置" aria-label="设置" onClick={openSettings}>
-            <Settings size={17} />
+          <button className="tool-button settings-button" title="模型设置（DeepSeek API Key）" aria-label="设置" onClick={openSettings}>
+            <Settings size={16} />
+            <span>设置</span>
           </button>
         </div>
       </aside>
